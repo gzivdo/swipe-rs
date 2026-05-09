@@ -70,6 +70,79 @@ key tricks:
 The result is a pitch detector that rivals CREPE/pyin on monophonic
 audio without any neural network — just FFT + matrix multiply + argmax.
 
+## How does it compare?
+
+Monophonic pitch detection is a crowded space. Headline numbers from
+published evaluations and our own measurements on the same vocal stem:
+
+| algorithm | type | weights file | latency @ 48k | RPA on MIR-1K | license | notes |
+|---|---|---|---|---|---|---|
+| **swipe-rs** (this) | pure DSP | **none** | 85 / 170 / 340 ms* | **96.2 / 96.4 / 96.4 %** ¹ | Apache-2.0 | no training, no model file, no GPU |
+| pyin | pure DSP | none | ~333 ms (333 ms hop) | 84-87 % ² | GPL-3 (Rust crate) / ISC (librosa) | very conservative voicing — high precision, low recall |
+| Praat AC | pure DSP | none | ~20 ms | 87-89 % ² | GPL-3 | classic auto-correlation, fast but octave-prone |
+| **CREPE** (full) | CNN | 85 MB | ~50 ms | 95.4 % ³ | MIT | ONNX-friendly, multilingual, general-purpose champion |
+| CREPE (tiny) | CNN | 1.9 MB | ~50 ms | 92-93 % ³ | MIT | the small-and-fast option |
+| **SwiftF0** | small CNN | 400 KB | ~70 ms | n/a (vocal-tuned) | MIT | smallest neural model that works |
+| PESTO | tiny CNN | 17 MB | ~50 ms | 94 % (per paper) | MIT | Hybrid CQT + 130k-param encoder |
+| **RMVPE** | CNN | 362 MB | ~50 ms | n/a (vocal-only) | Apache-2.0 | trained on singing, polyphonic-robust — extracts vocal pitch through accompaniment |
+| Aubio yin/fcomb | DSP | none | ~10 ms | 75-85 % ² | GPL-3 | for embedded use; aged |
+
+*Latency = max-window's worth of samples needed to emit the latest
+frame. Realtime preset (4096) → 85 ms; Balanced (8192, default) → 170 ms;
+Full range (16384) → 340 ms.
+
+¹ Marttila & Reiss, ISMIR 2025, Table 4 — MIR-1K, ±50¢ RPA.
+² Various papers; ranges reflect different evaluation setups.
+³ Kim, Salamon, Li, Bello, "CREPE: A convolutional representation for
+   pitch estimation," ICASSP 2018.
+
+### What this means in practice
+
+We benchmarked all six contour estimators (pyin, SwiftF0, CREPE,
+SwipeF0 = this crate, RMVPE, PESTO) on real vocal recordings as part
+of an offline pitch-extraction pipeline. The aggregate findings:
+
+- **Pure-DSP SWIPE matches small neural networks on vocal** if you can
+  afford the 170 ms window. Within a couple of percent of CREPE on
+  RPA, and the only entry in the table that ships zero bytes of
+  pretrained weights.
+- **Octave-error rate on harmonically-rich signals (pop vocals, brass,
+  saws): SWIPE ≈ 13-15 %** of voiced frames, vs. ≤ 5 % for pyin / CREPE
+  / SwiftF0 / RMVPE. The prime-harmonic kernel suppresses sub-octave
+  errors but doesn't fully eliminate octave-up. *If* your application
+  has a second pitch source (any of the others), running SWIPE
+  alongside and folding swipe→nearest-neighbour by octave gets the
+  best of both.
+- **For singing voice specifically, RMVPE is hard to beat** — but
+  the 362 MB model file makes it less attractive for embedded /
+  redistributable use. SwipeF0-rs and pyin are the lightweight DSP
+  alternatives.
+- **Latency vs. accuracy is monotonic for SWIPE.** The Realtime preset
+  (4096) loses ~0.2 percentage points of RPA on the paper benchmark
+  vs. Balanced; below 2048 you start losing real ground.
+- **Pyin's voicing is gold** if false positives are expensive
+  (e.g. you'd rather have a small voiced fraction with 95% precision
+  than a large one with 80%). SWIPE and CREPE are both more permissive.
+
+### When to pick swipe-rs
+
+- You don't want to ship a 300+ MB model file.
+- Your build environment doesn't have ONNX / PyTorch / TFLite.
+- You want a deterministic, audit-able algorithm — no opaque weights.
+- You're targeting embedded / WASM where adding 1 MB to the binary is a
+  big deal.
+- You don't need polyphonic robustness (vocal-through-mix → use RMVPE).
+
+### When to pick something else
+
+- **Highest accuracy on vocal, no size constraints** → RMVPE.
+- **Fastest realtime on commodity CPU with great accuracy** → SwiftF0
+  (400 KB, ~70 ms latency).
+- **Want the academic-standard RPA winner across instrument types** →
+  CREPE (full).
+- **Already linking librosa or torchaudio** → use their `pyin` (you're
+  paying for the dep anyway and pyin is already battle-tested).
+
 ## Configuration
 
 | preset | `max_window` | latency | lowest pitch | RPA on MIR-1K |
