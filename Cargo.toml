@@ -1,0 +1,26 @@
+# Empty [workspace] keeps this crate out of the parent vocal-pitch
+# Cargo workspace when developing inside the parent tree.
+[workspace]
+
+[package]
+name = "swipe-rs"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "gzivdo",
+    "Claude Opus 4.7 <noreply@anthropic.com>",
+]
+license = "Apache-2.0"
+description = "Pure-DSP SWIPE'/SWIPE pitch estimator in Rust (multi-resolution mel-axis variant)"
+repository = "https://github.com/gzivdo/swipe-rs"
+readme = "README.md"
+keywords = ["pitch", "swipe", "audio", "dsp", "f0"]
+categories = ["multimedia::audio", "algorithms"]
+rust-version = "1.70"
+
+[dependencies]
+ndarray = "0.16"
+realfft = "3.5"
+
+[dev-dependencies]
+hound = "3.5"
