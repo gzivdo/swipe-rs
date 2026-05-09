@@ -154,6 +154,40 @@ fn confidence_is_low_on_white_noise() {
 }
 
 #[test]
+fn process_into_matches_process() {
+    // process() and process_into() should emit the exact same frames for the
+    // same input — process() is a thin wrapper around process_into(). This
+    // also pins the contract that process_into APPENDS rather than overwrites.
+    let audio = sine(440.0, 0.8);
+
+    let mut a = Swipe::new().unwrap();
+    let from_process = a.process(&audio).unwrap();
+
+    let mut b = Swipe::new().unwrap();
+    let mut from_into: Vec<PitchFrame> = Vec::new();
+    // Feed in two chunks to make sure append-semantics also hold across calls.
+    let mid = audio.len() / 2;
+    b.process_into(&audio[..mid], &mut from_into).unwrap();
+    b.process_into(&audio[mid..], &mut from_into).unwrap();
+
+    assert_eq!(from_process.len(), from_into.len(), "frame count mismatch");
+    for (x, y) in from_process.iter().zip(from_into.iter()) {
+        assert_eq!(x.frame_index, y.frame_index);
+        assert!((x.pitch_hz - y.pitch_hz).abs() < 1e-6);
+        assert!((x.confidence - y.confidence).abs() < 1e-6);
+    }
+
+    // Append-semantics: a second process_into call must NOT clear `out`.
+    let prev_len = from_into.len();
+    let mut c = Swipe::new().unwrap();
+    c.process_into(&audio, &mut from_into).unwrap();
+    assert!(
+        from_into.len() > prev_len,
+        "process_into should append, not overwrite",
+    );
+}
+
+#[test]
 fn realtime_preset_works() {
     let mut swipe = Swipe::with_max_window(4096).unwrap();
     let audio = sine(440.0, 0.8);

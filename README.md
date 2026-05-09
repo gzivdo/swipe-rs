@@ -27,8 +27,32 @@ fn main() -> Result<(), swipe_rs::Error> {
 Add to `Cargo.toml`:
 ```toml
 [dependencies]
-swipe-rs = "0.1"
+swipe-rs = "0.2"
 ```
+
+### Zero-allocation API for realtime
+
+If you're processing audio in a tight loop and don't want a fresh `Vec`
+allocation on every call, use [`Swipe::process_into`] which appends to a
+caller-owned buffer:
+
+```rust
+use swipe_rs::{Swipe, PitchFrame};
+
+let mut swipe = Swipe::new()?;
+let mut frames: Vec<PitchFrame> = Vec::with_capacity(64);
+
+loop {
+    let chunk = read_audio_chunk();
+    frames.clear();                          // optional — see docs
+    swipe.process_into(&chunk, &mut frames)?;
+    for f in &frames { /* … */ }
+}
+```
+
+After the first second of audio the `Vec` will reach steady-state
+capacity and never reallocate again. Functionally equivalent to
+`process()`; pick whichever fits your style.
 
 ## What is SWIPE
 
@@ -244,6 +268,24 @@ stable; the public surface is intentionally minimal so it should
 solidify quickly.
 
 Bug reports, accuracy regressions, and PRs welcome.
+
+## Roadmap
+
+- **`no_std` support** — currently blocked upstream. `realfft` is built
+  on `rustfft`, which depends on `Vec`/`Box` from `std` and has no
+  `#![no_std]` configuration. Once `rustfft` gains `no_std + alloc`,
+  swipe-rs will follow with a `default-features = ["std"]` flag for
+  embedded / WASM-no-stdlib targets. (No `Send`/`Sync` story, no
+  threading, no I/O — the algorithm itself is purely numeric.)
+- **In-place output for `no_alloc`** — once no_std lands, expose a
+  `process_into_slice(audio, out_slice) -> Result<usize, _>` that fills a
+  fixed-size `[MaybeUninit<PitchFrame>; N]` for true zero-allocation
+  use. The current `process_into(&mut Vec<_>)` is zero-allocation
+  *amortised*; the slice version would be zero-allocation always.
+- **Tighter pitch grid** — current 36-bins-per-octave grid plus
+  parabolic refinement gives ~10-cent practical precision on synthetic
+  input. A finer grid (or a different refinement) would help for
+  retuning applications. Not on the paper's critical path.
 
 ## Authors
 

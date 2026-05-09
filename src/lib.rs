@@ -383,10 +383,34 @@ impl Swipe {
     /// Feed audio. Returns every frame whose right edge has now landed
     /// inside the current buffer. May return zero frames if the input
     /// chunk was small. Drives one frame per [`HOP_SAMPLES`] of new audio.
+    ///
+    /// Allocates a fresh `Vec<PitchFrame>` on every call. Realtime callers
+    /// that want to reuse a buffer should use [`Self::process_into`].
     pub fn process(&mut self, audio: &[f32]) -> Result<Vec<PitchFrame>, Error> {
+        let mut out = Vec::new();
+        self.process_into(audio, &mut out)?;
+        Ok(out)
+    }
+
+    /// Same as [`Self::process`] but appends frames to a caller-provided
+    /// buffer instead of allocating a new one.
+    ///
+    /// Frames are **appended** — `out` is *not* cleared first. This lets
+    /// realtime callers keep a single long-lived `Vec` across thousands
+    /// of `process_into` calls without ever hitting the allocator.
+    /// `out.clear()` it yourself before the call if you only want the
+    /// frames produced by this chunk.
+    ///
+    /// `out`'s capacity is grown in amortised-`O(1)` fashion (Rust's
+    /// `Vec` doubling strategy), so after the first second of audio it
+    /// will essentially never reallocate again.
+    pub fn process_into(
+        &mut self,
+        audio: &[f32],
+        out: &mut Vec<PitchFrame>,
+    ) -> Result<(), Error> {
         self.buffer.extend_from_slice(audio);
         let hop_s = HOP_SAMPLES as f32 / SAMPLE_RATE as f32;
-        let mut out = Vec::new();
 
         loop {
             let buf_end = self.buffer_origin + self.buffer.len() as u64;
@@ -416,7 +440,7 @@ impl Swipe {
                 self.buffer_origin += drop_n as u64;
             }
         }
-        Ok(out)
+        Ok(())
     }
 
     fn mel_mag(&mut self, audio_end: usize, w_len: usize) -> Result<Vec<f32>, Error> {
