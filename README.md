@@ -291,6 +291,11 @@ Bug reports, accuracy regressions, and PRs welcome.
 
 ## Authors
 
-- gzivdo — initial extraction and packaging
-- Claude Opus 4.7 (Anthropic) — implementation work, refactoring,
-  documentation
+Created and maintained by **gzivdo** — design, architecture, research
+direction, and code review.
+
+Co-author (implementation): **Claude Opus 4.7** (Anthropic), under
+gzivdo's direction. AI is not a copyright holder; copyright is held
+entirely by the human maintainer (per US Copyright Office guidance,
+Jan 2025). See [`NOTICE`](NOTICE) for the formal copyright line and
+authorship statement.

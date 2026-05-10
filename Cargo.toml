@@ -6,10 +6,7 @@
 name = "swipe-rs"
 version = "0.2.0"
 edition = "2021"
-authors = [
-    "gzivdo",
-    "Claude Opus 4.7 <noreply@anthropic.com>",
-]
+authors = ["gzivdo"]
 license = "Apache-2.0"
 description = "Pure-DSP SWIPE'/SWIPE pitch estimator in Rust (multi-resolution mel-axis variant)"
 repository = "https://github.com/gzivdo/swipe-rs"

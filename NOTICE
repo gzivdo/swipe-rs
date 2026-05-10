@@ -1,12 +1,27 @@
 swipe-rs
 Copyright 2026 gzivdo
-Copyright 2026 Anthropic (Claude Opus 4.7 contributions)
 
 This software is licensed under the Apache License, Version 2.0
 (the "License"); you may not use this software except in compliance
 with the License. You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
+
+============================================================================
+
+AUTHORSHIP
+
+Substantial portions of the code in this repository were authored
+with Claude Opus 4.7 (Anthropic) acting as an implementation tool
+under direction and review by the copyright holder. Per US Copyright
+Office guidance ("Copyright and Artificial Intelligence", Part 2,
+January 2025), AI-generated material is not separately copyrightable;
+copyright in this work attaches only to the human contributions of
+selection, arrangement, direction, and modification.
+
+============================================================================
+
+ALGORITHM PROVENANCE
 
 The SWIPE'/SWIPE algorithm itself is in the public domain (algorithms
 and mathematical methods are not copyrightable). This package is an
