@@ -29,7 +29,7 @@ fn main() -> Result<(), swipe_rs::Error> {
 Add to `Cargo.toml`:
 ```toml
 [dependencies]
-swipe-rs = "0.2"
+swipe-rs = "0.3"
 ```
 
 ### Zero-allocation API for realtime

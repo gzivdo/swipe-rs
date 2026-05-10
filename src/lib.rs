@@ -73,7 +73,20 @@ pub const HOP_SAMPLES: usize = 480;
 pub struct PitchFrame {
     /// Frame index since the last [`Swipe::reset`] (or stream start).
     pub frame_index: u64,
-    /// Wall time of this frame in seconds (`frame_index * HOP_SAMPLES / SAMPLE_RATE`).
+    /// Audio-content time of this frame in seconds — **time at the
+    /// CENTER of the analysis window**, not the window's start. Each
+    /// frame's analysis window covers `[frame_index*HOP, frame_index*HOP +
+    /// max_window)` samples, so the content time is
+    /// `(frame_index*HOP + max_window/2) / SAMPLE_RATE`. Labelling at the
+    /// content-center matches `librosa.stft(center=True)` and other
+    /// pitch trackers' conventions, so frames produced by `swipe-rs` line
+    /// up correctly with PYin/CREPE/RMVPE outputs on a common time grid.
+    ///
+    /// **Breaking change vs 0.2.x**: previously `time_s` was the
+    /// window-start time (`frame_index*HOP/SAMPLE_RATE`). The old value
+    /// was `max_window/2/SAMPLE_RATE` earlier than the actual audio
+    /// content (~85 ms at the Balanced preset). Subtract that constant
+    /// if you depended on the old labelling.
     pub time_s: f32,
     /// Estimated fundamental frequency in Hz.
     pub pitch_hz: f32,
@@ -411,6 +424,13 @@ impl Swipe {
     ) -> Result<(), Error> {
         self.buffer.extend_from_slice(audio);
         let hop_s = HOP_SAMPLES as f32 / SAMPLE_RATE as f32;
+        // Each emitted frame's analysis window is right-aligned, covering
+        // [frame_index*HOP, frame_index*HOP + max_window). We label its
+        // time_s with the content-CENTER (frame_index*HOP + max_window/2),
+        // not the window start, so frames line up with center=True
+        // STFT-based trackers (PYin/librosa-style) and FCPE on a common
+        // time grid. See PitchFrame::time_s for the breaking-change note.
+        let center_offset_s = (self.fft_size as f32 / 2.0) / SAMPLE_RATE as f32;
 
         loop {
             let buf_end = self.buffer_origin + self.buffer.len() as u64;
@@ -422,7 +442,7 @@ impl Swipe {
             let abs_idx = self.next_frame_index;
             out.push(PitchFrame {
                 frame_index: abs_idx,
-                time_s: abs_idx as f32 * hop_s,
+                time_s: abs_idx as f32 * hop_s + center_offset_s,
                 pitch_hz: f0,
                 confidence: conf,
             });
