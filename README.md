@@ -1,5 +1,7 @@
 # swipe-rs
 
+[Русская версия](README.ru.md)
+
 Pure-DSP **SWIPE'** / **SWIPE** pitch estimator in Rust. No neural networks,
 no model weights, no training — just an FFT, a kernel matrix, and
 math from two published papers.
